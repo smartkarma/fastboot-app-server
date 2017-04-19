@@ -17,6 +17,7 @@ class ExpressHTTPServer {
     this.gzip = options.gzip || false;
     this.beforeMiddleware = options.beforeMiddleware || noop;
     this.afterMiddleware = options.afterMiddleware || noop;
+    this.rootURL = options.rootURL;
 
     this.app = express();
   }
@@ -38,18 +39,24 @@ class ExpressHTTPServer {
     }
 
     if (this.cache) {
-      app.get('/*', this.buildCacheMiddleware());
+      app.get(`${this.rootURL || '/'}*`, this.buildCacheMiddleware());
     }
 
     if (this.distPath) {
-      app.get('/', fastbootMiddleware);
-      app.use(express.static(this.distPath));
-      app.get('/assets/*', function(req, res) {
+      app.get(this.rootURL || '/', fastbootMiddleware);
+
+      if (this.rootURL) {
+        app.use(this.rootURL, express.static(this.distPath));      
+      } else {
+        app.use(express.static(this.distPath));      
+      }
+
+      app.get(`${this.rootURL || '/'}assets/*`, function(req, res) {
         res.sendStatus(404);
       });
     }
 
-    app.get('/*', fastbootMiddleware);
+    app.get(`${this.rootURL || '/'}*`, fastbootMiddleware);
 
     this.afterMiddleware(app);
 
